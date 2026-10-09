@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sobre los datos y el método — Dashboard HUT Barcelona</title>
+<style>
+  :root{--bg:#f6f5f2;--card:#fff;--ink:#1d1c1a;--ink2:#5d5a54;--muted:#8a867e;--line:#e4e1da;--accent:#9c7a2e;--accent-soft:#f3ead6;--dark:#141414}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;font-size:16px;line-height:1.55}
+  header{background:var(--dark);color:#fff;padding:18px 28px;display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px}
+  header h1{margin:0;font-size:22px;font-weight:600}
+  header p{margin:4px 0 0;color:#c9c5bb;font-size:13px}
+  header nav a{color:#e6cf93;text-decoration:none;font-size:14px;margin-right:18px}
+  header nav a:hover{text-decoration:underline}
+  main{max-width:900px;margin:0 auto;padding:26px 28px 50px}
+  h2{font-size:20px;margin:34px 0 8px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 20px;margin:12px 0}
+  table{border-collapse:collapse;width:100%;font-size:14px}
+  th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--ink2);font-weight:600}
+  code{background:var(--accent-soft);padding:1px 5px;border-radius:4px;font-size:14px}
+  pre{background:#1d1c1a;color:#f3ead6;padding:14px 16px;border-radius:8px;white-space:pre-wrap;font-size:13.5px;line-height:1.5}
+  a{color:var(--accent)}
+  ol li,ul li{margin-bottom:6px}
+  .note{border-left:0;background:var(--accent-soft);border-radius:8px;padding:12px 16px;font-size:15px}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Sobre los datos y el método</h1>
+    <p>Dashboard de ejemplo — Práctica «Dashboarding con datos abiertos e IA» · Gestión de Proyectos (UAB)</p>
+  </div>
+  <nav><a href="index.html">Dashboard</a><a href="sobre.html">Sobre los datos y el método</a></nav>
+</header>
+
+<main>
+  <p>Este dashboard es un <b>ejemplo docente</b>: muestra cómo pasar de un dataset abierto a una visualización interactiva
+  con la ayuda de una herramienta de IA (Claude o ChatGPT), sin programar un back-end.</p>
+
+  <h2>1. Los datos</h2>
+  <div class="card">
+    <table>
+      <tr><th>Dataset</th><td>Habitatges d'ús turístic de la ciutat de Barcelona (Viviendas de uso turístico, HUT)</td></tr>
+      <tr><th>Publicador</th><td>Ajuntament de Barcelona — Open Data BCN</td></tr>
+      <tr><th>Enlace</th><td><a href="https://opendata-ajuntament.barcelona.cat/data/es/dataset/habitatges-us-turistic" target="_blank">opendata-ajuntament.barcelona.cat/data/es/dataset/habitatges-us-turistic</a></td></tr>
+      <tr><th>Archivo</th><td><code>hut_comunicacio_opendata.csv</code> (≈1,4 MB, ≈10.700 filas, separador coma, UTF-8)</td></tr>
+      <tr><th>Actualización</th><td>Semanal (el recurso CSV siempre contiene la última versión; hay históricos trimestrales en ZIP)</td></tr>
+      <tr><th>Licencia</th><td>Creative Commons Attribution 4.0 (CC BY 4.0): se puede reutilizar citando la fuente</td></tr>
+      <tr><th>Límites de barrio</th><td><code>barris.geojson</code> — repositorio <a href="https://github.com/martgnz/bcn-geodata" target="_blank">martgnz/bcn-geodata</a> (73 barrios)</td></tr>
+    </table>
+  </div>
+
+  <h2>2. Columnas utilizadas</h2>
+  <div class="card">
+    <table>
+      <tr><th>Columna</th><th>Significado</th><th>Uso en el dashboard</th></tr>
+      <tr><td><code>CODI_DISTRICTE</code>, <code>NOM_DISTRICTE</code></td><td>Código y nombre del distrito</td><td>Filtro y gráfico por distrito</td></tr>
+      <tr><td><code>CODI_BARRI</code>, <code>NOM_BARRI</code></td><td>Código (2 dígitos) y nombre del barrio</td><td>Unión con el mapa (<code>BARRI</code> en el GeoJSON)</td></tr>
+      <tr><td><code>NUMERO_PLACES</code></td><td>Plazas (camas) de la vivienda</td><td>Indicador «Nº de plazas»</td></tr>
+      <tr><td><code>LONGITUD_X</code>, <code>LATITUD_Y</code></td><td>Coordenadas WGS84</td><td>Capa de puntos</td></tr>
+    </table>
+  </div>
+
+  <h2>3. Método</h2>
+  <ol>
+    <li>Cada fila del CSV es una vivienda de uso turístico registrada. Se cuentan las filas por barrio (<b>nº de viviendas</b>) y se suman las plazas (<b>nº de plazas</b>).</li>
+    <li>La <b>densidad</b> (viviendas por km²) divide el nº de viviendas por la superficie del barrio (propiedad <code>AREA</code> del GeoJSON, en m², convertida a km²).</li>
+    <li>El mapa usa 7 clases con cortes fijos y una escala de un solo color (claro = pocos, oscuro = muchos).</li>
+    <li>Todo el cálculo se hace en el navegador con JavaScript (MapLibre GL JS para el mapa, con el mapa base gratuito de OpenFreeMap sin API key; Chart.js para los gráficos y PapaParse para leer el CSV). No hay servidor ni base de datos.</li>
+  </ol>
+
+  <h2>4. Limitaciones</h2>
+  <ul>
+    <li>Solo incluye viviendas <b>registradas legalmente</b>; no mide la oferta ilegal ni plataformas como Airbnb.</li>
+    <li>Los valores absolutos favorecen a los barrios grandes o muy poblados: para comparar la presión turística sería mejor normalizar por población o por nº de viviendas totales (dataset de población de Open Data BCN).</li>
+    <li>Algunas filas (6 en la versión de mayo de 2026) no tienen barrio asignado: cuentan en los totales pero no aparecen en el mapa.</li>
+    <li>El GeoJSON de barrios es un proyecto de código abierto, no una fuente oficial.</li>
+  </ul>
+
+  <h2>5. Cómo se ha hecho (prompts)</h2>
+  <p>El código se ha generado con IA a partir de estas instrucciones (versión resumida; las completas están en las diapositivas de la práctica):</p>
+  <pre>1) «Te adjunto hut_comunicacio_opendata.csv (Open Data BCN). Describe las columnas, cuenta las filas,
+   detecta valores vacíos y propón 3 preguntas que un dashboard podría responder.»
+
+2) «Crea un dashboard en UN SOLO archivo HTML con MapLibre GL JS (base OpenFreeMap), Chart.js y PapaParse (CDN):
+   4 KPI, mapa coroplético por barrio con el GeoJSON de martgnz/bcn-geodata (BARRI = CODI_BARRI),
+   top 10 de barrios, gráfico por distrito, filtro por distrito y botón para cargar el CSV.»
+
+3) «Corrige este error de la consola: … / Añade una página sobre.html con la fuente y la licencia.»</pre>
+
+  <h2>6. Cómo reutilizarlo</h2>
+  <div class="note">
+    <b>En tu ordenador:</b> abre <code>index.html</code> con doble clic y selecciona el CSV cuando la página lo pida.<br>
+    <b>En un servidor web:</b> copia la carpeta completa (con <code>data/hut_comunicacio_opendata.csv</code> y <code>data/barris.geojson</code>);
+    la página cargará los datos automáticamente.
+  </div>
+
+  <p style="margin-top:34px;font-size:13px;color:var(--muted)">Elaboración: Prof. Dario Cottafava — Universitat Autònoma de Barcelona (2026/27), con asistencia de IA.
+  Datos: © Ajuntament de Barcelona, CC BY 4.0.</p>
+</main>
+</body>
+</html>

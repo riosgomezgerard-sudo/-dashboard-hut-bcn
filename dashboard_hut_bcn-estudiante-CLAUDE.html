@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Viviendas de uso turístico en Barcelona</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<style>
+  :root{--bg:#f6f4ef;--card:#fff;--ink:#231f1a;--ink2:#5f584d;--line:#e6e0d4;--gold:#a8812f;--gold2:#c9a24c;--soft:#f3ead6;--dark:#1a1712}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",system-ui,Roboto,Arial,sans-serif;font-size:15px}
+  header{background:var(--dark);color:#fff;padding:18px 24px}
+  header h1{margin:0;font-size:22px;font-weight:600}
+  header p{margin:4px 0 0;color:#cfc6b4;font-size:13px}
+  main{max-width:1300px;margin:0 auto;padding:18px 24px 32px}
+  .bar{display:flex;flex-wrap:wrap;gap:14px 22px;align-items:center;margin-bottom:16px}
+  .bar label{font-size:13px;color:var(--ink2);display:flex;align-items:center;gap:8px}
+  .bar .file{background:var(--gold);color:#fff;padding:8px 14px;border-radius:6px;cursor:pointer;font-weight:600}
+  .file input{display:none}
+  select{font:inherit;padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:#fff}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:#fff}
+  .seg button{font:inherit;font-size:13px;border:0;background:none;padding:6px 11px;cursor:pointer;color:var(--ink2)}
+  .seg button.on{background:var(--gold);color:#fff}
+  #msg{font-size:13px;color:var(--ink2)}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  .kpi b{display:block;font-size:30px;line-height:1.1;color:var(--ink)}
+  .kpi span{font-size:13px;color:var(--ink2)}
+  .grid{display:grid;grid-template-columns:1.35fr 1fr;gap:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  .card h2{font-size:15px;margin:0 0 10px;font-weight:600}
+  #map{height:540px;border-radius:8px}
+  .right{display:grid;grid-template-rows:1fr 1fr;gap:14px}
+  .chart{position:relative;height:230px}
+  .legend,.info{background:#fff;padding:8px 10px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.2);font-size:12px;line-height:18px}
+  .legend i{display:inline-block;width:14px;height:12px;margin-right:6px;vertical-align:-1px;border:1px solid #ccc}
+  .info{font-size:13px;min-width:180px}
+  footer{max-width:1300px;margin:0 auto;padding:0 24px 28px;font-size:12px;color:var(--ink2)}
+  .empty #content{opacity:.35;pointer-events:none}
+  @media (max-width:900px){.grid{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}#map{height:400px}}
+</style>
+</head>
+<body class="empty">
+<header>
+  <h1>Viviendas de uso turístico (HUT) en Barcelona</h1>
+  <p>Registro municipal de viviendas de uso turístico por barrio y distrito</p>
+</header>
+
+<main>
+  <div class="bar">
+    <label class="file">📂 Seleccionar hut_comunicacio_opendata.csv
+      <input type="file" id="csvInput" accept=".csv">
+    </label>
+    <span id="msg">Selecciona el archivo CSV descargado de Open Data BCN para empezar.</span>
+  </div>
+
+  <div id="content">
+    <div class="bar">
+      <label>Distrito <select id="fDist"><option value="ALL">Todos los distritos</option></select></label>
+      <label>Indicador
+        <span class="seg" id="fMetric">
+          <button data-m="n" class="on">Nº de viviendas</button>
+          <button data-m="p">Nº de plazas</button>
+          <button data-m="dens">Viviendas por km²</button>
+        </span>
+      </label>
+      <label><input type="checkbox" id="fPoints"> Ver cada vivienda</label>
+    </div>
+
+    <div class="kpis">
+      <div class="kpi"><b id="kN">–</b><span>viviendas de uso turístico</span></div>
+      <div class="kpi"><b id="kP">–</b><span>plazas turísticas</span></div>
+      <div class="kpi"><b id="kA">–</b><span>plazas por vivienda</span></div>
+      <div class="kpi"><b id="kT">–</b><span>de las viviendas en los 5 barrios con más HUT</span></div>
+    </div>
+
+    <div class="grid">
+      <div class="card"><h2 id="mapTitle">Mapa por barrio</h2><div id="map"></div></div>
+      <div class="right">
+        <div class="card"><h2 id="topTitle">Top 10 de barrios</h2><div class="chart"><canvas id="cTop"></canvas></div></div>
+        <div class="card"><h2 id="distTitle">Total por distrito</h2><div class="chart"><canvas id="cDist"></canvas></div></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>Fuente: Open Data BCN (Ajuntament de Barcelona), CC BY 4.0 · Límites de barrio: martgnz/bcn-geodata · Mapa base © OpenStreetMap, © CARTO</footer>
+
+<script>
+const GEOJSON_URL = "https://raw.githubusercontent.com/martgnz/bcn-geodata/master/barris/barris.geojson";
+const RAMP = ["#f7f1e3","#ecdcb4","#dcc085","#c9a24c","#a8812f","#7e5f1f","#4f3a12"];
+const METRICS = {
+  n:    {label:"Nº de viviendas",   unit:"viviendas",     breaks:[1,25,50,100,250,500]},
+  p:    {label:"Nº de plazas",      unit:"plazas",        breaks:[1,100,250,500,1500,3000]},
+  dens: {label:"Viviendas por km²", unit:"viviendas/km²", breaks:[1,10,50,100,250,500]}
+};
+const fmt  = n => n.toLocaleString("es-ES", {maximumFractionDigits:0, useGrouping:"always"});
+const fmt1 = n => n.toLocaleString("es-ES", {minimumFractionDigits:1, maximumFractionDigits:1});
+const pad2 = s => String(s ?? "").trim().padStart(2, "0");
+
+let geo, rows = [], barris = {}, dists = {};
+let state = {dist:"ALL", metric:"n", points:false};
+let map, geoLayer, pointLayer, info, chTop, chDist;
+
+// 1. Cargar el GeoJSON de barrios al abrir la página
+fetch(GEOJSON_URL).then(r => r.json()).then(g => { geo = g; buildMap(); buildCharts(); })
+  .catch(() => msg("No se ha podido descargar el GeoJSON de barrios. Comprueba la conexión a internet."));
+
+// 2. Leer el CSV elegido por el usuario
+document.getElementById("csvInput").addEventListener("change", e => {
+  const file = e.target.files[0]; if (!file) return;
+  msg("Leyendo " + file.name + "…");
+  Papa.parse(file, {
+    header:true, skipEmptyLines:true, transformHeader:h => h.replace(/^﻿/, "").trim(),
+    complete: res => {
+      if (!res.data.length || !("CODI_BARRI" in res.data[0])) { msg("El archivo no tiene la columna CODI_BARRI. ¿Es el CSV correcto?"); return; }
+      if (!geo) { msg("Esperando el mapa de barrios… vuelve a seleccionar el archivo en unos segundos."); return; }
+      prepare(res.data); update();
+      document.body.classList.remove("empty");
+      msg(`${file.name}: ${fmt(rows.length)} viviendas cargadas.`);
+    }
+  });
+});
+function msg(t){ document.getElementById("msg").textContent = t; }
+
+// 3. Preparar los datos: limpiar y agregar por barrio
+function prepare(data){
+  rows = data.map(r => ({
+    barri: r.CODI_BARRI ? pad2(r.CODI_BARRI) : "", dist: pad2(r.CODI_DISTRICTE), distNom: (r.NOM_DISTRICTE||"").trim(),
+    barriNom: (r.NOM_BARRI||"").trim(), places: parseInt(r.NUMERO_PLACES) || 0,
+    lon: parseFloat(r.LONGITUD_X), lat: parseFloat(r.LATITUD_Y)
+  }));
+  barris = {};
+  geo.features.forEach(f => {
+    const p = f.properties;
+    barris[pad2(p.BARRI)] = {name:p.NOM, dist:pad2(p.DISTRICTE), area:p.AREA/1e6, n:0, p:0};
+  });
+  rows.forEach(r => { const b = barris[r.barri]; if (b){ b.n++; b.p += r.places; } });
+  Object.values(barris).forEach(b => b.dens = b.n / b.area);
+  dists = {}; rows.forEach(r => dists[r.dist] = r.distNom);
+  const sel = document.getElementById("fDist");
+  sel.innerHTML = '<option value="ALL">Todos los distritos</option>' +
+    Object.keys(dists).sort().map(k => `<option value="${k}">${k} · ${dists[k]}</option>`).join("");
+  state.dist = "ALL";
+}
+
+// 4. Mapa coroplético (Leaflet)
+function color(v, m){
+  if (!v) return "#ffffff";
+  const br = METRICS[m].breaks; let i = 0;
+  while (i < br.length && v >= br[i]) i++;
+  return RAMP[Math.min(i, RAMP.length - 1)];
+}
+function style(f){
+  const b = barris[pad2(f.properties.BARRI)] || {n:0,p:0,dens:0,dist:""};
+  const dim = state.dist !== "ALL" && b.dist !== state.dist;
+  return {fillColor: color(b[state.metric], state.metric), fillOpacity: dim ? .15 : .85, color:"#fff", weight:1};
+}
+function buildMap(){
+  map = L.map("map").setView([41.395, 2.16], 12);
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+    {attribution:"© OpenStreetMap © CARTO", maxZoom:18}).addTo(map);
+  geoLayer = L.geoJSON(geo, {style, onEachFeature:(f, layer) => layer.on({
+    mouseover: e => { e.target.setStyle({weight:2.5, color:"#231f1a"}); e.target.bringToFront(); info.update(barris[pad2(f.properties.BARRI)]); },
+    mouseout:  e => { geoLayer.resetStyle(e.target); info.update(); },
+    click:     e => map.fitBounds(e.target.getBounds(), {maxZoom:15})
+  })}).addTo(map);
+  map.fitBounds(geoLayer.getBounds());
+
+  info = L.control({position:"topright"});
+  info.onAdd = function(){ this._div = L.DomUtil.create("div", "info"); this.update(); return this._div; };
+  info.update = function(b){
+    this._div.innerHTML = b && b.name
+      ? `<b>${b.name}</b><br>Viviendas: <b>${fmt(b.n || 0)}</b><br>Plazas: <b>${fmt(b.p || 0)}</b><br>Viviendas/km²: <b>${fmt1(b.dens || 0)}</b>`
+      : "Pasa el ratón por un barrio";
+  };
+  info.addTo(map);
+
+  const legend = L.control({position:"bottomright"});
+  legend.onAdd = () => { const d = L.DomUtil.create("div", "legend"); d.id = "legend"; return d; };
+  legend.addTo(map);
+  pointLayer = L.layerGroup();
+}
+function updateLegend(){
+  const m = METRICS[state.metric], br = m.breaks;
+  let h = `<b>${m.label}</b><br><i style="background:#fff"></i>0<br>`;
+  br.forEach((lo, i) => h += `<i style="background:${RAMP[i+1]}"></i>${fmt(lo)}${br[i+1] ? "–" + fmt(br[i+1]-1) : "+"}<br>`);
+  document.getElementById("legend").innerHTML = h;
+}
+
+// 5. Gráficos (Chart.js)
+function barOpts(horizontal){
+  return {indexAxis: horizontal ? "y" : "x", responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{display:false}, tooltip:{callbacks:{label:c => " " + fmt(c.raw)}}},
+    scales:{x:{grid:{display:horizontal}, ticks:{font:{size:11}}}, y:{grid:{display:!horizontal}, ticks:{font:{size:11}}}},
+    elements:{bar:{borderRadius:4}}};
+}
+function buildCharts(){
+  chTop  = new Chart(document.getElementById("cTop"),  {type:"bar", data:{labels:[], datasets:[{data:[], backgroundColor:"#a8812f", maxBarThickness:18}]}, options:barOpts(true)});
+  chDist = new Chart(document.getElementById("cDist"), {type:"bar", data:{labels:[], datasets:[{data:[], backgroundColor:[], maxBarThickness:34}]}, options:barOpts(false)});
+}
+
+// 6. Actualizar todo cuando cambia un filtro
+function update(){
+  if (!rows.length) return;
+  const m = state.metric, M = METRICS[m];
+  const sel = rows.filter(r => state.dist === "ALL" || r.dist === state.dist);
+  const bs  = Object.values(barris).filter(b => state.dist === "ALL" || b.dist === state.dist);
+
+  const N = sel.length, P = sel.reduce((s, r) => s + r.places, 0);
+  const top5 = [...bs].sort((a, b) => b.n - a.n).slice(0, 5).reduce((s, b) => s + b.n, 0);
+  document.getElementById("kN").textContent = fmt(N);
+  document.getElementById("kP").textContent = fmt(P);
+  document.getElementById("kA").textContent = N ? fmt1(P / N) : "–";
+  document.getElementById("kT").textContent = N ? Math.round(100 * top5 / N) + " %" : "–";
+
+  geoLayer.setStyle(style); updateLegend();
+  document.getElementById("mapTitle").textContent = M.label + " por barrio";
+  const layers = geoLayer.getLayers().filter(l => state.dist === "ALL" || pad2(l.feature.properties.DISTRICTE) === state.dist);
+  map.fitBounds(L.featureGroup(layers).getBounds(), {maxZoom:15});
+
+  pointLayer.clearLayers();
+  if (state.points){
+    const canvas = L.canvas();
+    sel.forEach(r => { if (isFinite(r.lat) && isFinite(r.lon))
+      L.circleMarker([r.lat, r.lon], {renderer:canvas, radius:2.4, weight:.6, color:"#231f1a", fillColor:"#fff", fillOpacity:.9})
+        .bindTooltip(`${r.barriNom}: ${r.places} plazas`).addTo(pointLayer); });
+    pointLayer.addTo(map);
+  } else map.removeLayer(pointLayer);
+
+  const top = [...bs].sort((a, b) => b[m] - a[m]).slice(0, 10);
+  chTop.data.labels = top.map(b => b.name.length > 26 ? b.name.slice(0, 25) + "…" : b.name);
+  chTop.data.datasets[0].data = top.map(b => Math.round(b[m]));
+  document.getElementById("topTitle").textContent = "Top 10 de barrios · " + M.unit;
+  chTop.update();
+
+  const dm = m === "dens" ? "n" : m, agg = {};
+  rows.forEach(r => { agg[r.dist] = agg[r.dist] || {n:0, p:0}; agg[r.dist].n++; agg[r.dist].p += r.places; });
+  const keys = Object.keys(agg).sort();
+  chDist.data.labels = keys.map(k => dists[k]);
+  chDist.data.datasets[0].data = keys.map(k => agg[k][dm]);
+  chDist.data.datasets[0].backgroundColor = keys.map(k => state.dist === "ALL" || k === state.dist ? "#a8812f" : "#e4dccb");
+  document.getElementById("distTitle").textContent = "Total por distrito · " + (dm === "n" ? "viviendas" : "plazas");
+  chDist.update();
+}
+
+// 7. Filtros
+document.getElementById("fDist").addEventListener("change", e => { state.dist = e.target.value; update(); });
+document.querySelectorAll("#fMetric button").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll("#fMetric button").forEach(x => x.classList.remove("on"));
+  b.classList.add("on"); state.metric = b.dataset.m; update();
+}));
+document.getElementById("fPoints").addEventListener("change", e => { state.points = e.target.checked; update(); });
+</script>
+</body>
+</html>

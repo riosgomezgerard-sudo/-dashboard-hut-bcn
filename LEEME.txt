@@ -1,0 +1,26 @@
+DASHBOARD DE EJEMPLO — Viviendas de uso turístico (HUT) en Barcelona
+Práctica «Dashboarding con datos abiertos e IA» · Gestión de Proyectos (UAB)
+
+ESTRUCTURA DE LA CARPETA (súbela tal cual a tu web)
+  index.html                          ← el dashboard
+  sobre.html                          ← página "Sobre los datos y el método"
+  PROMPTS_para_clase.txt              ← prompts para copiar en Claude/ChatGPT
+  data/barris.geojson                 ← límites de los 73 barrios (incluido)
+  data/hut_comunicacio_opendata.csv   ← ¡AÑÁDELO TÚ! (ver abajo)
+
+PASO PENDIENTE: DESCARGAR EL CSV
+  1. Abre https://opendata-ajuntament.barcelona.cat/data/es/dataset/habitatges-us-turistic
+  2. En "Datos y Recursos", primer recurso "hut_comunicacio_opendata.csv" → botón "Descargar".
+  3. Guarda el archivo dentro de la carpeta data/ con ese mismo nombre.
+     (No lo abras y guardes con Excel: podría cambiar el separador o los acentos.)
+
+CÓMO FUNCIONA
+  - Publicado en un servidor web (tu web, GitHub Pages, Netlify...): carga data/*.csv automáticamente.
+  - Abierto con doble clic en el ordenador (file://): el navegador bloquea la lectura automática,
+    así que la página pide seleccionar el CSV a mano. El GeoJSON se descarga de GitHub si no lo encuentra.
+  - Para probar la versión "servidor" en local: abre una terminal en esta carpeta y ejecuta
+        python -m http.server 8000
+    y visita http://localhost:8000
+
+Requiere conexión a internet (librerías MapLibre GL JS, Chart.js y PapaParse desde cdn.jsdelivr.net y mapa base gratuito de OpenFreeMap, sin API key).
+Datos: © Ajuntament de Barcelona — Open Data BCN, licencia CC BY 4.0.
